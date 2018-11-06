@@ -1,0 +1,39 @@
+let dbPromise;class DBHelper{static get DATABASE_URL(){const port=1337
+return`http://localhost:${port}/restaurants`;}
+static get REVIEW_URL(){const port=1337;return`http://localhost:${port}/reviews/?restaurant_id=`;}
+static get REVIEW_POST_URL(){const port=1337;return`http://localhost:${port}/reviews`;}
+static openDatabase(){idb.open('restaurants',1,function(upgradeDb){var restaurants=upgradeDb.createObjectStore('restaurants',{keyPath:'id'});var reviews=upgradeDb.createObjectStore('reviews',{keyPath:'id'});var pending_reviews=upgradeDb.createObjectStore('pending_reviews',{keyPath:'id',autoIncrement:true});restaurants.createIndex('id','id');reviews.createIndex('restaurant_id','restaurant_id');});return idb.open('restaurants',1);}
+static fetchRestaurantsFetch(callback){DBHelper.getCachedMessages().then(function(data){if(data.length>0){return callback(null,data);}
+fetch(DBHelper.DATABASE_URL,{credentials:'same-origin'}).then(res=>res.json()).then(data=>{dbPromise.then(function(db){var transaction=db.transaction('restaurants','readwrite');var store=transaction.objectStore('restaurants');data.forEach(restaurant=>store.put(restaurant));store.openCursor(null,'prev').then(function(cursor){return cursor.advance(100);}).then(function deleteRest(cursor){if(!cursor){return;}
+cursor.delete();return cursor.continue().then(deleteRest);});});return callback(null,data);}).catch(err=>{return callback(err,null)});});}
+static markAsFavorite(restaurant){let actState=restaurant.is_favorite;let url=DBHelper.DATABASE_URL+'/'+restaurant.id;if(actState=='true'){url+='?is_favorite=true';}else{url+='?is_favorite=false';}
+return fetch(url,{method:'PUT'}).then(function(response){if(response.ok){return response.json();}else{return[{}];}});}
+static fetchReviews(callback){DBHelper.getCachedReviews().then(function(data){if(data.length>0){return callback(null,data);}
+fetch(DBHelper.REVIEW_URL,{credentials:'same-origin'}).then(res=>res.json()).then(data=>{var ergebnis;dbPromise.then(function(db){var transaction=db.transaction('reviews','readwrite');var store=transaction.objectStore('reviews').index('restaurant_id');ergebnis=store.getAll(parseInt(getParameterByName('id')));return callback(null,ergebnis);});}).catch(err=>{return callback(err,null)});});}
+static getCachedMessages(){dbPromise=DBHelper.openDatabase();return dbPromise.then(function(db){var transaction=db.transaction('restaurants');var objectStore=transaction.objectStore('restaurants');return objectStore.getAll();});}
+static getCachedReviews(){dbPromise=DBHelper.openDatabase();return dbPromise.then(function(db){var transaction=db.transaction('reviews');var objectStore=transaction.objectStore('reviews');return objectStore.getAll();});}
+static fetchRestaurantById(id,callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{const restaurant=restaurants.find(r=>r.id==id);if(restaurant){callback(null,restaurant);}else{callback('Restaurant does not exist',null);}}});}
+static fetchReviewsById(id,callback){DBHelper.openDatabase().then(database=>{if(!database){return;}
+return database.transaction('reviews').objectStore('reviews').getAll();}).then(reviewData=>{reviewData=reviewData.filter(review=>review.restaurant_id==id);if(reviewData&&reviewData.length>0){return callback(null,reviewData);}else{fetch(DBHelper.REVIEW_URL+id).then(response=>{if(response.status!=200){console.log("Error has occured, couldn't load reviews!");}else{return response.json();}}).then(reviews=>{DBHelper.openDatabase().then(database=>{if(!database){return;}
+let store=database.transaction('reviews','readwrite').objectStore('reviews');if(reviews&&reviews.length>0){reviews.map(review=>{store.put(review);});}});return callback(null,reviews);});}});}
+static fetchReviewsByRestaurantId(id,callback){DBHelper.fetchReviewsById(id,(error,reviews)=>{if(!error){let allReviews=reviews;if(allReviews&&allReviews.length>0){callback(null,allReviews);}else{callback('missing reviews for this restaurant',null);}}else{callback(error,null);}});}
+static submitReview(review){let headers=new Headers().set('Accept','application/json');let formData=JSON.stringify(review);let url=DBHelper.REVIEW_POST_URL;let options={method:'POST',headers,body:formData};let resp=fetch(url,options);resp.then((response)=>response.json()).then(review=>{DBHelper.reloadReviews(review.restaurant_id);}).catch(exception=>{console.log("exception occured "+exception);DBHelper.saveReview(review);})}
+static getPendingReviews(){return new Promise((resolve,reject)=>{DBHelper.openDatabase().then(db=>{let tx=db.transaction("pending_reviews");let store=tx.objectStore("pending_reviews");store.getAll().then(data=>{return resolve(data);}).catch(e=>{reject(e);});})})}
+static removePendingReviews(){return new Promise((resolve,reject)=>{DBHelper.openDatabase().then(db=>{var tx=db.transaction("pending_reviews","readwrite");tx.objectStore("pending_reviews").clear();return resolve();}).catch(reject);});}
+static reloadReviews(id){return new Promise((resolve,reject)=>{fetch(DBHelper.REVIEW_URL+self.restaurant.id).then(response=>{response.json().then(data=>{DBHelper.openDatabase().then(db=>{let tx=db.transaction('reviews','readwrite');let store=tx.objectStore('reviews');data.forEach(element=>{element.restaurant_id=parseInt(element.restaurant_id);element.rating=parseInt(element.rating);store.put(element);});});let event=new CustomEvent("reviews_updated",{detail:{restaurant_id:id}});document.dispatchEvent(event);return resolve(data);});});})}
+static saveReview(review){DBHelper.openDatabase().then(database=>{let tx=database.transaction('pending_reviews','readwrite');let store=tx.objectStore('pending_reviews');store.add({id:Date.now(),data:review});})}
+static fetchRestaurantByCuisine(cuisine,callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{const results=restaurants.filter(r=>r.cuisine_type==cuisine);callback(null,results);}});}
+static fetchRestaurantByNeighborhood(neighborhood,callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{const results=restaurants.filter(r=>r.neighborhood==neighborhood);callback(null,results);}});}
+static fetchRestaurantByCuisineAndNeighborhood(cuisine,neighborhood,callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{let results=restaurants
+if(cuisine!='all'){results=results.filter(r=>r.cuisine_type==cuisine);}
+if(neighborhood!='all'){results=results.filter(r=>r.neighborhood==neighborhood);}
+callback(null,results);}});}
+static fetchNeighborhoods(callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{const neighborhoods=restaurants.map((v,i)=>restaurants[i].neighborhood)
+const uniqueNeighborhoods=neighborhoods.filter((v,i)=>neighborhoods.indexOf(v)==i)
+callback(null,uniqueNeighborhoods);}});}
+static fetchCuisines(callback){DBHelper.fetchRestaurantsFetch((error,restaurants)=>{if(error){callback(error,null);}else{const cuisines=restaurants.map((v,i)=>restaurants[i].cuisine_type)
+const uniqueCuisines=cuisines.filter((v,i)=>cuisines.indexOf(v)==i)
+callback(null,uniqueCuisines);}});}
+static urlForRestaurant(restaurant){return(`./restaurant.html?id=${restaurant.id}`);}
+static mapMarkerForRestaurant(restaurant,map){const marker=new google.maps.Marker({position:restaurant.latlng,title:restaurant.name,url:DBHelper.urlForRestaurant(restaurant),map:map,animation:google.maps.Animation.DROP});return marker;}}
+if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.min.js').then(function(registration){console.log('Serviceworker was sucessfully registered',registration);}).catch(function(err){console.log('Could not register Serviceworker',err);})}

@@ -1,0 +1,46 @@
+{
+  "name": "mas-relaunch",
+  "version": "1.0.0",
+  "description": "mas website relaunch",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mas-designs/mas-relaunch.git"
+  },
+  "keywords": [
+    "website",
+    "webdev",
+    "relaunch",
+    "mobile",
+    "web",
+    "responsive",
+    "portfolio",
+    "webdeveloper",
+    "front-end",
+    "developer"
+  ],
+  "author": "MAS",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mas-designs/mas-relaunch/issues"
+  },
+  "homepage": "https://github.com/mas-designs/mas-relaunch#readme",
+  "devDependencies": {
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-autoprefixer": "^6.0.0",
+    "gulp-clean-css": "^3.10.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-connect": "^5.6.1",
+    "gulp-copy": "^4.0.1",
+    "gulp-eslint": "^5.0.0",
+    "gulp-htmlclean": "^2.7.22",
+    "gulp-inject": "^4.3.2",
+    "gulp-jsmin": "^0.1.5",
+    "gulp-sass": "^4.0.2",
+    "gulp-sass-lint": "^1.4.0"
+  }
+}
