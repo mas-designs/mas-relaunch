@@ -43,11 +43,22 @@ gulp.task('js',()=>{
 
 gulp.task('html:prod',()=>{
   gulp.src('build/index.html')
-  .pipe(inject(gulp.src("/dist/css/mas.css",{ignorePath:false,addRootSlash:false})))
-  .pipe(inject(gulp.src("/dist/js/mas.js",{ignorePath:false,addRootSlash:false})))
+  .pipe(inject(gulp.src('dist/css/mas.css'),{ignorePath:'/dist/',addRootSlash:false}))
+  .pipe(inject(gulp.src('dist/js/mas.js'),{ignorePath:'/dist/',addRootSlash:false}))
   .pipe(gulp.dest("dist"))
 });
 
+gulp.task('connect', () =>
+  connect.server({
+    root: "dist",
+    port: 8000,
+    livereload: true
+  })
+);
+
+gulp.task('watch',['html:prod','connect'],function(){
+  gulp.watch('build');
+});
 
 
 /*gulp.task('javascripts', () =>
